@@ -15,6 +15,12 @@ function init() {
     createGeometry();
     setupLights();
     setupEventListeners();
+    
+    // 設置初始縮放比例為 2
+    if (cube) {
+        cube.scale.set(2, 2, 2);
+    }
+    
     animate();
 }
 
@@ -265,6 +271,9 @@ function setupEventListeners() {
     const scaleSlider = document.getElementById('scaleSlider');
     const scaleValue = document.getElementById('scaleValue');
     
+    // 確保初始值顯示正確
+    scaleValue.textContent = parseFloat(scaleSlider.value).toFixed(1);
+    
     scaleSlider.addEventListener('input', (event) => {
         const scale = parseFloat(event.target.value);
         cube.scale.set(scale, scale, scale);
@@ -337,11 +346,6 @@ function animate() {
     
     cube.rotation.x = rotationX;
     cube.rotation.y = rotationY;
-    
-    // 自動旋轉（微妙效果）
-    if (!mouseDown) {
-        cube.rotation.y += 0.005;
-    }
     
     renderer.render(scene, camera);
 }
