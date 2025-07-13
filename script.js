@@ -43,94 +43,34 @@ function init() {
  * 初始化 MediaPipe 人臉偵測
  */
 function initFaceDetection() {
-    try {
-        console.log("MediaPipe 庫已加載");
-        
-        videoElement = document.getElementById('input-video');
-        canvasElement = document.getElementById('output-canvas');
-        
-        if (!videoElement) {
-            console.error("找不到視頻");
-            return;
+    videoElement = document.createElement('video');
+    videoElement.style.display = 'none'; // 隱藏視頻元素
+    document.body.appendChild(videoElement);
+    faceMesh = new FaceMesh({
+        locateFile: (file) => {
+            console.log(`加載 FaceMesh 文件: ${file}`);
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
         }
-        
-        console.log("找到視頻和畫布元素");
-        
-        // 設置 FaceMesh
-        console.log("正在創建 FaceMesh 實例...");
-        faceMesh = new FaceMesh({
-            locateFile: (file) => {
-                console.log(`加載 FaceMesh 文件: ${file}`);
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-            }
+    });
+    
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    
+    faceMesh.onResults(onFaceDetectionResults);
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+    .then(() => {
+        camera_utils = new Camera(videoElement, {
+            onFrame: () => faceMesh.send({image: videoElement}),
+            width: 640,
+            height: 480
         });
-        
-        console.log("設置 FaceMesh 選項...");
-        faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-        
-        console.log("設置 FaceMesh 結果處理函數...");
-        faceMesh.onResults(onFaceDetectionResults);
-        
-        // 直接使用 navigator.mediaDevices 檢查攝像頭
-        console.log("檢查攝像頭權限...");
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    console.log("攝像頭權限已獲取");
-                    
-                    // 釋放流，因為 Camera 類會重新請求
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    // 設置攝像頭
-                    console.log("正在創建 Camera 實例...");
-                    camera_utils = new Camera(videoElement, {
-                        onFrame: async () => {
-                            try {
-                                await faceMesh.send({image: videoElement});
-                            } catch (error) {
-                                console.error("處理視頻幀時出錯:", error);
-                            }
-                        },
-                        width: 640,
-                        height: 480
-                    });
-                    
-                    // 添加攝像頭啟動成功和錯誤處理
-                    console.log("正在啟動攝像頭...");
-                    camera_utils.start()
-                        .then(() => {
-                            console.log("攝像頭啟動成功");
-                        })
-                        .catch(error => {
-                            console.error("攝像頭啟動失敗:", error);
-                        });
-                })
-                .catch(error => {
-                    console.error("獲取攝像頭權限失敗:", error);
-                });
-        } else {
-            const errorMsg = "您的瀏覽器不支持 getUserMedia API";
-            console.error(errorMsg);
-        }
-            
-    } catch (error) {
-        console.error("初始化人臉偵測時出錯:", error);
-        
-        // 在頁面上顯示錯誤
-        const errorDiv = document.createElement('div');
-        errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-        errorDiv.style.color = 'white';
-        errorDiv.style.padding = '10px';
-        errorDiv.style.margin = '10px';
-        errorDiv.style.borderRadius = '5px';
-        errorDiv.textContent = `初始化人臉偵測時出錯: ${error.message}`;
-        document.body.prepend(errorDiv);
-    }
+        camera_utils.start();
+    });
 }
 
 /**
@@ -143,14 +83,14 @@ function onFaceDetectionResults(results) {
             const rightEyeIndex = 473;
             
             leftEyeCoords = {
-                x: landmarks[leftEyeIndex].x * canvasElement.width,
-                y: landmarks[leftEyeIndex].y * canvasElement.height,
+                x: landmarks[leftEyeIndex].x * 640,
+                y: landmarks[leftEyeIndex].y * 480,
                 z: landmarks[leftEyeIndex].z
             };
             
             rightEyeCoords = {
-                x: landmarks[rightEyeIndex].x * canvasElement.width,
-                y: landmarks[rightEyeIndex].y * canvasElement.height,
+                x: landmarks[rightEyeIndex].x * 640,
+                y: landmarks[rightEyeIndex].y * 480,
                 z: landmarks[rightEyeIndex].z
             };
             
