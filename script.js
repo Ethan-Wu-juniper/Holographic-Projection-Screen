@@ -67,33 +67,109 @@ function createGeometry() {
     
     // 定義面的索引
     const indices = [
-        // 底面
+        // 底面 (0)
         0, 2, 1,  0, 3, 2,
-        // 頂面
+        // 頂面 (1)
         4, 5, 6,  4, 6, 7,
-        // 側面
-        0, 1, 5,  0, 5, 4,  // 下面
-        1, 2, 6,  1, 6, 5,  // 右面
-        2, 3, 7,  2, 7, 6,  // 上面
-        3, 0, 4,  3, 4, 7   // 左面
+        // 側面 - 下面 (2)
+        0, 1, 5,  0, 5, 4,
+        // 側面 - 右面 (3)
+        1, 2, 6,  1, 6, 5,
+        // 側面 - 上面 (4)
+        2, 3, 7,  2, 7, 6,
+        // 側面 - 左面 (5)
+        3, 0, 4,  3, 4, 7
     ];
     
+    // 添加 UV 坐標，用於紋理映射
+    const uvs = [];
+    
+    // 為每個頂點添加 UV 坐標
+    for (let i = 0; i < 8; i++) {
+        // 簡單的 UV 映射，每個頂點使用不同的 UV 坐標
+        const u = (i % 4 < 2) ? 0 : 1;
+        const v = (i % 4 === 0 || i % 4 === 3) ? 0 : 1;
+        uvs.push(u, v);
+    }
+    
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     
-    // 創建材質
-    const material = new THREE.MeshPhongMaterial({ 
-        color: 0x00ff88,
-        shininess: 100,
-        specular: 0x222222
+    // 創建紋理加載器
+    const textureLoader = new THREE.TextureLoader();
+    
+    // 加載六個不同的紋理
+    const textures = [
+        textureLoader.load('https://picsum.photos/id/1015/512/512'), // 底面
+        textureLoader.load('https://picsum.photos/id/1018/512/512'), // 頂面
+        textureLoader.load('https://picsum.photos/id/1019/512/512'), // 下面
+        textureLoader.load('https://picsum.photos/id/1021/512/512'), // 右面
+        textureLoader.load('https://picsum.photos/id/1039/512/512'), // 上面
+        textureLoader.load('https://picsum.photos/id/1043/512/512')  // 左面
+    ];
+    
+    // 為每個紋理創建材質
+    const materials = textures.map(texture => {
+        return new THREE.MeshPhongMaterial({
+            map: texture,
+            shininess: 50,
+            specular: 0x333333
+        });
     });
     
-    // 創建網格
-    cube = new THREE.Mesh(geometry, material);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    scene.add(cube);
+    // 創建分組
+    const cubeGroup = new THREE.Group();
+    
+    // 為每個面創建單獨的網格
+    const faceGroups = [
+        [0, 1, 2, 3, 4, 5], // 底面 (2 個三角形)
+        [6, 7, 8, 9, 10, 11], // 頂面 (2 個三角形)
+        [12, 13, 14, 15, 16, 17], // 下面 (2 個三角形)
+        [18, 19, 20, 21, 22, 23], // 右面 (2 個三角形)
+        [24, 25, 26, 27, 28, 29], // 上面 (2 個三角形)
+        [30, 31, 32, 33, 34, 35]  // 左面 (2 個三角形)
+    ];
+    
+    // 為每個面創建單獨的幾何體和網格
+    for (let i = 0; i < faceGroups.length; i++) {
+        const faceGeometry = new THREE.BufferGeometry();
+        
+        // 提取這個面的頂點
+        const faceIndices = faceGroups[i];
+        const faceVertices = [];
+        const faceUvs = [];
+        
+        // 為這個面創建新的頂點數組
+        for (let j = 0; j < faceIndices.length; j++) {
+            const vertexIndex = indices[faceIndices[j]];
+            faceVertices.push(
+                vertices[vertexIndex * 3],
+                vertices[vertexIndex * 3 + 1],
+                vertices[vertexIndex * 3 + 2]
+            );
+            
+            // 簡單的 UV 映射
+            faceUvs.push(j % 3 === 0 ? 0 : 1, j % 3 === 0 ? 0 : 1);
+        }
+        
+        faceGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceVertices), 3));
+        faceGeometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(faceUvs), 2));
+        faceGeometry.computeVertexNormals();
+        
+        // 創建網格並添加到分組
+        const faceMesh = new THREE.Mesh(faceGeometry, materials[i]);
+        faceMesh.castShadow = true;
+        faceMesh.receiveShadow = true;
+        cubeGroup.add(faceMesh);
+    }
+    
+    // 添加分組到場景
+    scene.add(cubeGroup);
+    
+    // 保存引用以便動畫
+    cube = cubeGroup;
     
     // 添加邊框
     const edges = new THREE.EdgesGeometry(geometry);
