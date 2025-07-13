@@ -7,7 +7,6 @@
 // 全局變數 - Three.js
 let scene, camera, renderer;
 let cube, wireframe;
-let mouseX = 0, mouseY = 0, mouseDown = false;
 let rotationX = 0, rotationY = 0, targetRotationX = 0, targetRotationY = 0;
 
 // 全局變數 - MediaPipe 人臉偵測
@@ -18,6 +17,7 @@ let canvasElement;
 let canvasCtx;
 let leftEyeCoords = { x: 0, y: 0, z: 0 };
 let rightEyeCoords = { x: 0, y: 0, z: 0 };
+let eyeCoords = {x : 0, y : 0, z : 0}
 
 // 初始化函數
 function init() {
@@ -83,16 +83,19 @@ function onFaceDetectionResults(results) {
             const rightEyeIndex = 473;
             
             leftEyeCoords = {
-                x: landmarks[leftEyeIndex].x * 640,
-                y: landmarks[leftEyeIndex].y * 480,
-                z: landmarks[leftEyeIndex].z
+                x: (1 - landmarks[leftEyeIndex].x) - 0.5,
+                y: landmarks[leftEyeIndex].y - 0.5,
             };
             
             rightEyeCoords = {
-                x: landmarks[rightEyeIndex].x * 640,
-                y: landmarks[rightEyeIndex].y * 480,
-                z: landmarks[rightEyeIndex].z
+                x: (1 - landmarks[rightEyeIndex].x) - 0.5,
+                y: landmarks[rightEyeIndex].y - 0.5,
             };
+
+            eyeCoords = {
+                x: (leftEyeCoords.x + rightEyeCoords.x) / 2,
+                y: (leftEyeCoords.y + rightEyeCoords.y) / 2 
+            }
             
             // 更新眼睛座標顯示
             updateEyeCoordinatesDisplay();
@@ -104,11 +107,8 @@ function onFaceDetectionResults(results) {
  * 更新眼睛座標顯示
  */
 function updateEyeCoordinatesDisplay() {
-    const leftEyeElement = document.getElementById('left-eye-coords');
-    const rightEyeElement = document.getElementById('right-eye-coords');
-    
-    leftEyeElement.textContent = `X: ${leftEyeCoords.x.toFixed(2)}, Y: ${leftEyeCoords.y.toFixed(2)}, Z: ${leftEyeCoords.z.toFixed(4)}`;
-    rightEyeElement.textContent = `X: ${rightEyeCoords.x.toFixed(2)}, Y: ${rightEyeCoords.y.toFixed(2)}, Z: ${rightEyeCoords.z.toFixed(4)}`;
+    const eyeElement = document.getElementById('eye-coords');
+    eyeElement.textContent = `X: ${eyeCoords.x.toFixed(2)}, Y: ${eyeCoords.y.toFixed(2)}`;
 }
 
 /**
@@ -346,11 +346,6 @@ function setupLights() {
  * 設置事件監聽器
  */
 function setupEventListeners() {
-    // 滑鼠事件
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('mousemove', onMouseMove);
-    
     // 滾輪縮放
     document.addEventListener('wheel', onWheel);
     
@@ -372,42 +367,10 @@ function setupEventListeners() {
 }
 
 /**
- * 滑鼠按下事件處理
- */
-function onMouseDown(event) {
-    mouseDown = true;
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-}
-
-/**
- * 滑鼠釋放事件處理
- */
-function onMouseUp() {
-    mouseDown = false;
-}
-
-/**
- * 滑鼠移動事件處理
- */
-function onMouseMove(event) {
-    if (mouseDown) {
-        const deltaX = event.clientX - mouseX;
-        const deltaY = event.clientY - mouseY;
-        
-        targetRotationY += deltaX * 0.001;
-        targetRotationX += deltaY * 0.001;
-        
-        mouseX = event.clientX;
-        mouseY = event.clientY;
-    }
-}
-
-/**
  * 滾輪事件處理
  */
 function onWheel(event) {
-    const scale = event.deltaY > 0 ? 1.1 : 0.9;
+    const scale = event.deltaY > 0 ? 1.02 : 0.98;
     camera.position.multiplyScalar(scale);
     camera.position.clampLength(2, 20);
 }
@@ -430,9 +393,9 @@ function animate() {
     // 平滑旋轉
     rotationX += (targetRotationX - rotationX) * 0.1;
     rotationY += (targetRotationY - rotationY) * 0.1;
-    
-    cube.rotation.x = rotationX;
-    cube.rotation.y = rotationY;
+
+    cube.rotation.x = -eyeCoords.y;
+    cube.rotation.y = -(eyeCoords.x / 2);
     
     renderer.render(scene, camera);
 }
