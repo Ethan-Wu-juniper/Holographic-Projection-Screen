@@ -3,8 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js 立方體</title>
+    <title>Three.js 立方體 + MediaPipe 人臉偵測</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- MediaPipe 人臉偵測庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    
+    <!-- 添加錯誤處理 -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("JavaScript 錯誤:", message, "在", source, "行:", lineno, "列:", colno, "錯誤對象:", error);
+            
+            // 在頁面上顯示錯誤
+            const errorDiv = document.createElement('div');
+            errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+            errorDiv.style.color = 'white';
+            errorDiv.style.padding = '10px';
+            errorDiv.style.margin = '10px';
+            errorDiv.style.borderRadius = '5px';
+            errorDiv.textContent = `錯誤: ${message} (${source}:${lineno})`;
+            document.body.prepend(errorDiv);
+            
+            return true; // 防止默認錯誤處理
+        };
+    </script>
 </head>
 <body>
     <div id="container">
@@ -13,6 +37,16 @@
             拖拽滑鼠旋轉 | 滾輪縮放<br>
             縮放比例: <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" style="width: 150px;">
             <span id="scaleValue">2.0</span>
+            <p>左眼: <span id="left-eye-coords">等待偵測...</span></p>
+            <p>右眼: <span id="right-eye-coords">等待偵測...</span></p>
+        </div>
+    </div>
+    
+    <div id="face-detection-container">
+        <h2>人臉偵測</h2>
+        <div class="video-container">
+            <video id="input-video" playsinline style="display: none;"></video>
+            <canvas id="output-canvas" width="640" height="480"></canvas>
         </div>
     </div>
 

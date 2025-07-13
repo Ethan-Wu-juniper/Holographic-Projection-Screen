@@ -1,16 +1,27 @@
 /**
- * 3D 梯形體應用
+ * 3D 梯形體應用 + MediaPipe 人臉偵測
  * 使用 Three.js 創建和顯示一個可互動的 3D 梯形體
+ * 使用 MediaPipe 進行人臉偵測並顯示眼睛座標
  */
 
-// 全局變數
+// 全局變數 - Three.js
 let scene, camera, renderer;
 let cube, wireframe;
 let mouseX = 0, mouseY = 0, mouseDown = false;
 let rotationX = 0, rotationY = 0, targetRotationX = 0, targetRotationY = 0;
 
+// 全局變數 - MediaPipe 人臉偵測
+let faceMesh;
+let camera_utils;
+let videoElement;
+let canvasElement;
+let canvasCtx;
+let leftEyeCoords = { x: 0, y: 0, z: 0 };
+let rightEyeCoords = { x: 0, y: 0, z: 0 };
+
 // 初始化函數
 function init() {
+    // 初始化 Three.js
     initScene();
     createGeometry();
     setupLights();
@@ -21,7 +32,143 @@ function init() {
         cube.scale.set(2, 2, 2);
     }
     
+    // 初始化 MediaPipe 人臉偵測
+    initFaceDetection();
+    
+    // 開始動畫循環
     animate();
+}
+
+/**
+ * 初始化 MediaPipe 人臉偵測
+ */
+function initFaceDetection() {
+    try {
+        console.log("MediaPipe 庫已加載");
+        
+        videoElement = document.getElementById('input-video');
+        canvasElement = document.getElementById('output-canvas');
+        
+        if (!videoElement) {
+            console.error("找不到視頻");
+            return;
+        }
+        
+        console.log("找到視頻和畫布元素");
+        
+        // 設置 FaceMesh
+        console.log("正在創建 FaceMesh 實例...");
+        faceMesh = new FaceMesh({
+            locateFile: (file) => {
+                console.log(`加載 FaceMesh 文件: ${file}`);
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+            }
+        });
+        
+        console.log("設置 FaceMesh 選項...");
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        
+        console.log("設置 FaceMesh 結果處理函數...");
+        faceMesh.onResults(onFaceDetectionResults);
+        
+        // 直接使用 navigator.mediaDevices 檢查攝像頭
+        console.log("檢查攝像頭權限...");
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    console.log("攝像頭權限已獲取");
+                    
+                    // 釋放流，因為 Camera 類會重新請求
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // 設置攝像頭
+                    console.log("正在創建 Camera 實例...");
+                    camera_utils = new Camera(videoElement, {
+                        onFrame: async () => {
+                            try {
+                                await faceMesh.send({image: videoElement});
+                            } catch (error) {
+                                console.error("處理視頻幀時出錯:", error);
+                            }
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    
+                    // 添加攝像頭啟動成功和錯誤處理
+                    console.log("正在啟動攝像頭...");
+                    camera_utils.start()
+                        .then(() => {
+                            console.log("攝像頭啟動成功");
+                        })
+                        .catch(error => {
+                            console.error("攝像頭啟動失敗:", error);
+                        });
+                })
+                .catch(error => {
+                    console.error("獲取攝像頭權限失敗:", error);
+                });
+        } else {
+            const errorMsg = "您的瀏覽器不支持 getUserMedia API";
+            console.error(errorMsg);
+        }
+            
+    } catch (error) {
+        console.error("初始化人臉偵測時出錯:", error);
+        
+        // 在頁面上顯示錯誤
+        const errorDiv = document.createElement('div');
+        errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+        errorDiv.style.color = 'white';
+        errorDiv.style.padding = '10px';
+        errorDiv.style.margin = '10px';
+        errorDiv.style.borderRadius = '5px';
+        errorDiv.textContent = `初始化人臉偵測時出錯: ${error.message}`;
+        document.body.prepend(errorDiv);
+    }
+}
+
+/**
+ * 處理人臉偵測結果
+ */
+function onFaceDetectionResults(results) {
+    if (results.multiFaceLandmarks) {
+        for (const landmarks of results.multiFaceLandmarks) {
+            const leftEyeIndex = 468;
+            const rightEyeIndex = 473;
+            
+            leftEyeCoords = {
+                x: landmarks[leftEyeIndex].x * canvasElement.width,
+                y: landmarks[leftEyeIndex].y * canvasElement.height,
+                z: landmarks[leftEyeIndex].z
+            };
+            
+            rightEyeCoords = {
+                x: landmarks[rightEyeIndex].x * canvasElement.width,
+                y: landmarks[rightEyeIndex].y * canvasElement.height,
+                z: landmarks[rightEyeIndex].z
+            };
+            
+            // 更新眼睛座標顯示
+            updateEyeCoordinatesDisplay();
+        }
+    }
+}
+
+/**
+ * 更新眼睛座標顯示
+ */
+function updateEyeCoordinatesDisplay() {
+    const leftEyeElement = document.getElementById('left-eye-coords');
+    const rightEyeElement = document.getElementById('right-eye-coords');
+    
+    leftEyeElement.textContent = `X: ${leftEyeCoords.x.toFixed(2)}, Y: ${leftEyeCoords.y.toFixed(2)}, Z: ${leftEyeCoords.z.toFixed(4)}`;
+    rightEyeElement.textContent = `X: ${rightEyeCoords.x.toFixed(2)}, Y: ${rightEyeCoords.y.toFixed(2)}, Z: ${rightEyeCoords.z.toFixed(4)}`;
 }
 
 /**
@@ -308,8 +455,8 @@ function onMouseMove(event) {
         const deltaX = event.clientX - mouseX;
         const deltaY = event.clientY - mouseY;
         
-        targetRotationY += deltaX * 0.01;
-        targetRotationX += deltaY * 0.01;
+        targetRotationY += deltaX * 0.001;
+        targetRotationX += deltaY * 0.001;
         
         mouseX = event.clientX;
         mouseY = event.clientY;
