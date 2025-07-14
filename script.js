@@ -10,6 +10,7 @@ let cube, wireframe;
 let rotationX = 0, rotationY = 0, targetRotationX = 0, targetRotationY = 0;
 
 // 全局變數 - MediaPipe 人臉偵測
+let fov = 75;
 let faceMesh;
 let camera_utils;
 let videoElement;
@@ -119,7 +120,7 @@ function initScene() {
     scene = new THREE.Scene();
     
     // 創建相機
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0, 8);
     camera.lookAt(0, 0, 0);
     
@@ -167,7 +168,7 @@ function createGeometry() {
     
     // 創建六個面的材質
     const materials = textures.map(texture => {
-        return new THREE.MeshPhongMaterial({
+        return new THREE.MeshPhysicalMaterial({
             map: texture,
         });
     });
@@ -376,6 +377,17 @@ function setupEventListeners() {
         const scale = parseFloat(event.target.value);
         cube.scale.set(scale, scale, scale);
         scaleValue.textContent = scale.toFixed(1);
+    });
+
+
+    const fovSlider = document.getElementById('fovSlider');
+    const fovValue = document.getElementById('fovValue');
+    fovValue.textContent = parseInt(fovSlider.value);
+    fovSlider.addEventListener('input', (event) => {
+        fov = parseInt(event.target.value);
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+        fovValue.textContent = fov;
     });
     
     // 響應式設計

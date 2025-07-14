@@ -34,12 +34,16 @@
     <div id="container">
         <div id="info">Holographic Projection Screen</div>
         <div id="controls">
-            拖拽滑鼠旋轉 | 滾輪縮放<br>
-            縮放比例: <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" style="width: 150px;">
-            <span id="scaleValue">2.0</span>
+            <br>滑鼠滾輪縮放</br>
+            <div>
+                縮放比例: <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="2" style="width: 150px;">
+                <span id="scaleValue">2.0</span>
+            </div>
+            <div>
+                fov: <input type="range" id="fovSlider" min="10" max="100" step="1" value="75" style="width: 150px;">
+                <span id="fovValue">75</span>
+            </div>
             <p>眼睛座標: <span id="eye-coords">等待偵測...</span></p>
-            <p>rotation X: <span id="rotation-x"></span></p>
-            <p>rotation Y: <span id="rotation-y"></span></p>
         </div>
     </div>
 
