@@ -147,11 +147,11 @@ function createGeometry() {
     // 加載六個不同的紋理
     const textures = [
         textureLoader.load('https://picsum.photos/id/1015/512/512'), // 底面
-        textureLoader.load('https://picsum.photos/id/1018/512/512'), // 頂面
-        textureLoader.load('https://picsum.photos/id/1019/512/512'), // 下面
-        textureLoader.load('https://picsum.photos/id/1021/512/512'), // 右面
-        textureLoader.load('https://picsum.photos/id/1039/512/512'), // 上面
-        textureLoader.load('https://picsum.photos/id/1043/512/512')  // 左面
+        textureLoader.load('./images/top_wall.png'), // 頂面
+        textureLoader.load('./images/floor.png'), // 下面
+        textureLoader.load('./images/right_wall.png'), // 右面
+        textureLoader.load('./images/cieling.png'), // 上面
+        textureLoader.load('./images/left_wall.png')  // 左面
     ];
     
     // 設置紋理屬性，防止拉伸
@@ -169,8 +169,6 @@ function createGeometry() {
     const materials = textures.map(texture => {
         return new THREE.MeshPhongMaterial({
             map: texture,
-            shininess: 50,
-            specular: 0x333333
         });
     });
     
@@ -219,7 +217,8 @@ function createGeometry() {
         vertices[1*3], vertices[1*3+1], vertices[1*3+2],
         vertices[2*3], vertices[2*3+1], vertices[2*3+2],
         vertices[6*3], vertices[6*3+1], vertices[6*3+2],
-        vertices[5*3], vertices[5*3+1], vertices[5*3+2]
+        vertices[5*3], vertices[5*3+1], vertices[5*3+2],
+        270
     );
     
     // 上側面
@@ -235,7 +234,8 @@ function createGeometry() {
         vertices[3*3], vertices[3*3+1], vertices[3*3+2],
         vertices[0*3], vertices[0*3+1], vertices[0*3+2],
         vertices[4*3], vertices[4*3+1], vertices[4*3+2],
-        vertices[7*3], vertices[7*3+1], vertices[7*3+2]
+        vertices[7*3], vertices[7*3+1], vertices[7*3+2],
+        90
     );
     
     // 創建網格並添加到分組
@@ -288,7 +288,7 @@ function createGeometry() {
 /**
  * 創建四邊形面的幾何體
  */
-function createFace(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4) {
+function createFace(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, rotation) {
     const geometry = new THREE.BufferGeometry();
     
     // 定義頂點位置
@@ -303,15 +303,20 @@ function createFace(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4) {
     ];
     
     // 定義 UV 坐標 - 確保紋理正確映射
-    const uvs = [
-        0, 0,
-        1, 0,
-        1, 1,
-        
-        0, 0,
-        1, 1,
-        0, 1
-    ];
+    let uvs;
+    switch(rotation) {
+        case 90:
+            uvs = [0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1]; // 順時針90度
+            break;
+        case 180:
+            uvs = [1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]; // 180度
+            break;
+        case 270:
+            uvs = [1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0]; // 順時針270度
+            break;
+        default:
+            uvs = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]; // 原始
+    }
     
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
@@ -320,26 +325,37 @@ function createFace(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4) {
     return geometry;
 }
 
-/**
- * 設置場景燈光
- */
+
 function setupLights() {
-    // 環境光
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+    // 環境光 - 提供基礎亮度
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.8); // 增強環境光
     scene.add(ambientLight);
     
-    // 方向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 5, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
+    // 主光源 - 從正面
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.01);
+    mainLight.position.set(0, 0, 10);
+    mainLight.castShadow = true;
+    scene.add(mainLight);
     
-    // 點光源
-    const pointLight = new THREE.PointLight(0xff6600, 0.5, 100);
-    pointLight.position.set(-5, 3, 2);
-    scene.add(pointLight);
+    // 左側補光
+    const leftLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    leftLight.position.set(-10, 0, 5);
+    scene.add(leftLight);
+    
+    // 右側補光
+    const rightLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    rightLight.position.set(10, 0, 5);
+    scene.add(rightLight);
+    
+    // 底部補光
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    bottomLight.position.set(0, -10, 5);
+    scene.add(bottomLight);
+    
+    // 頂部補光
+    const topLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    topLight.position.set(0, 10, 5);
+    scene.add(topLight);
 }
 
 /**
